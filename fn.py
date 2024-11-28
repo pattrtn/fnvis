@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Load data for mapping
-geo_data_path = './pisa-pisa.csv'  # Adjust the path if necessary
+geo_data_path = 'pisa-pisa.csv'  # Adjust the path if necessary
 try:
     df = pd.read_csv(geo_data_path, encoding='utf-8')
 except FileNotFoundError:
