@@ -4,12 +4,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Load data for mapping
-geo_data_path = 'pisa-pisa.csv'  # Adjust the path if necessary
-try:
-    df = pd.read_csv(geo_data_path, encoding='utf-8')
-except FileNotFoundError:
-    st.error(f"The file '{geo_data_path}' was not found. Please check the file path.")
-    st.stop()  # Stop further execution
+
+df = pd.read_csv(pisa-pisa.csv, encoding='utf-8')
+
 
 # Display columns in the data to ensure proper loading
 st.write("Columns in the dataset:", df.columns)
