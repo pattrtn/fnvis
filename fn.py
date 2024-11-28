@@ -1,52 +1,69 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Data Preparation
+# Load data into a DataFrame
 data = {
-    "CNTSCHID": [76400001, 76400001, 76400001, 76400001, 76400001],
-    "CNTSTUID": [76400396, 76400632, 76400865, 76400936, 76401306],
-    "ST004D01T": [2, 1, 1, 2, 1],  # Gender: 1 = Female, 2 = Male
-    "PV1MATH": [376.167, 374.905, 439.850, 430.583, 279.361],
-    "PV1READ": [255.171, 453.844, 423.108, 444.154, 320.895],
-    "PV1SCIE": [391.449, 385.540, 481.047, 413.090, 315.831],
+    'CNTSCHID': [76400001, 76400001, 76400001, 76400001, 76400001],
+    'CNTSTUID': [76400396, 76400632, 76400865, 76400936, 76401306],
+    'ST001D01T': [11, 10, 10, 10, 10],
+    'ST003D02T': [8, 1, 11, 2, 7],
+    'ST003D03T': [2006, 2007, 2006, 2007, 2006],
+    'ST004D01T': [2, 1, 1, 2, 1],
+    'ST250D06JA': [7640001, 7640002, 7640001, 7640001, 7640001],
+    'ST250D07JA': [7640002, 7640002, 7640002, 7640002, 7640002],
+    'PV1MATH': [376.167, 374.905, 439.850, 430.583, 279.361],
+    'PV1READ': [255.171, 453.844, 423.108, 444.154, 320.895],
+    'PV1SCIE': [391.449, 385.540, 481.047, 413.090, 315.831]
 }
 df = pd.DataFrame(data)
-df['Gender'] = df['ST004D01T'].map({1: 'Female', 2: 'Male'})
 
-# Streamlit App
-st.title("PISA Score Dashboard")
+# Streamlit app layout
+st.title('Educational Data Analysis Dashboard')
 
-# Dropdown to Select Gender
-gender = st.selectbox("Select Gender", options=["All", "Male", "Female"])
-if gender != "All":
-    filtered_df = df[df['Gender'] == gender]
-else:
-    filtered_df = df
+# Display raw data table
+st.subheader('Raw Data')
+st.write(df)
 
-# Average Scores Bar Chart
-st.subheader("Average Scores by Subject")
-avg_scores = filtered_df[['PV1MATH', 'PV1READ', 'PV1SCIE']].mean()
-bar_fig = px.bar(
-    x=avg_scores.index,
-    y=avg_scores.values,
-    labels={"x": "Subjects", "y": "Average Score"},
-    title="Average Scores by Subject",
-)
-st.plotly_chart(bar_fig)
+# Data Exploration Section
+st.subheader('Explore Data')
+year_filter = st.selectbox('Select Year', df['ST003D03T'].unique())
+filtered_data = df[df['ST003D03T'] == year_filter]
+st.write(f"Data for the year {year_filter}:")
+st.write(filtered_data)
 
-# Scatter Plot for Math vs Reading
-st.subheader("Mathematics vs Reading Scores")
-scatter_fig = px.scatter(
-    filtered_df,
-    x="PV1MATH",
-    y="PV1READ",
-    color="Gender",
-    labels={"PV1MATH": "Mathematics Score", "PV1READ": "Reading Score"},
-    title="Math vs Reading Scores",
-)
-st.plotly_chart(scatter_fig)
+# Statistics Section
+st.subheader('Basic Statistics')
+st.write("Summary Statistics:")
+st.write(df.describe())
 
-# Data Table
-st.subheader("Raw Data")
-st.dataframe(filtered_df)
+# Scatter Plot of PV1MATH vs PV1READ
+st.subheader('Scatter Plot of PV1MATH vs PV1READ')
+fig, ax = plt.subplots()
+sns.scatterplot(data=df, x='PV1MATH', y='PV1READ', ax=ax)
+ax.set_title('PV1MATH vs PV1READ')
+st.pyplot(fig)
+
+# Bar plot of PV1MATH, PV1READ, and PV1SCIE
+st.subheader('Bar Plot of PV1MATH, PV1READ, and PV1SCIE')
+df_long = pd.melt(df, id_vars=['CNTSTUID'], value_vars=['PV1MATH', 'PV1READ', 'PV1SCIE'], var_name='Subject', value_name='Score')
+fig, ax = plt.subplots()
+sns.barplot(x='CNTSTUID', y='Score', hue='Subject', data=df_long, ax=ax)
+ax.set_title('Scores by Subject')
+st.pyplot(fig)
+
+# Correlation heatmap
+st.subheader('Correlation Heatmap')
+corr = df[['PV1MATH', 'PV1READ', 'PV1SCIE']].corr()
+fig, ax = plt.subplots()
+sns.heatmap(corr, annot=True, cmap='coolwarm', ax=ax)
+ax.set_title('Correlation Heatmap')
+st.pyplot(fig)
+
+# Sidebar for interaction
+st.sidebar.header('Filters')
+selected_student = st.sidebar.selectbox('Select Student', df['CNTSTUID'].unique())
+student_data = df[df['CNTSTUID'] == selected_student]
+st.sidebar.write(f"Data for Student {selected_student}:")
+st.sidebar.write(student_data)
