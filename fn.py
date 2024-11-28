@@ -1,86 +1,94 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
-# Sample DataFrame with the data structure
+# Prepare the data
 data = {
-    'ST001D01T': [11, 10, 10, 10, 10],  # Grade level (7-12)
-    'ST003D02T': [8, 1, 11, 2, 7],  # Month of birth
-    'ST003D03T': [2006, 2007, 2006, 2007, 2006],  # Year of birth (AD)
-    'ST004D01T': [2, 1, 2, 2, 1],  # Gender (1 = Female, 2 = Male)
-    'ST250D06JA': [7640001, 7640002, 7640001, 7640002, 7640001],  # Smart TV ownership (1 = Yes, 2 = No)
-    'ST250D07JA': [7640001, 7640002, 7640001, 7640002, 7640001],  # Air purifier ownership (1 = Yes, 2 = No)
-    'PV1MATH': [376.167, 374.905, 439.850, 430.583, 279.361],  # Math score (out of 1000)
-    'PV1READ': [255.171, 453.844, 423.108, 444.154, 320.895],  # Reading score (out of 1000)
-    'PV1SCIE': [391.449, 385.540, 481.047, 413.090, 315.831]  # Science score (out of 1000)
+    "CNTSCHID": [76400001, 76400001, 76400001, 76400001, 76400001],
+    "CNTSTUID": [76400396, 76400632, 76400865, 76400936, 76401306],
+    "ST004D01T": [2, 1, 1, 2, 1],  # Gender: 1 = Female, 2 = Male
+    "PV1MATH": [376.167, 374.905, 439.850, 430.583, 279.361],
+    "PV1READ": [255.171, 453.844, 423.108, 444.154, 320.895],
+    "PV1SCIE": [391.449, 385.540, 481.047, 413.090, 315.831],
+    "ST003D03T": [2006, 2007, 2006, 2007, 2006],  # Year of birth
 }
-
 df = pd.DataFrame(data)
+df['Gender'] = df['ST004D01T'].map({1: 'Female', 2: 'Male'})
 
-# Streamlit App Layout
-st.title('Colorblind-Friendly Educational Data Analysis Dashboard')
+# Streamlit App
+st.title("Interactive Streamlit Dashboard")
+st.markdown("This dashboard visualizes PISA scores by gender and subjects.")
 
-# Display raw data
-st.subheader('Raw Data')
-st.write(df)
+# Sidebar Filters
+st.sidebar.header("Filters")
+selected_gender = st.sidebar.radio("Select Gender", options=["All", "Male", "Female"])
+selected_subjects = st.sidebar.multiselect(
+    "Select Subjects to Display",
+    options=["PV1MATH", "PV1READ", "PV1SCIE"],
+    default=["PV1MATH", "PV1READ", "PV1SCIE"],
+)
 
-# 1. Interactive Scatter Plot of Math vs Reading Scores
-st.subheader('Math vs Reading Scores by Year of Birth')
-fig_scatter = px.scatter(df, x='PV1MATH', y='PV1READ', color='ST003D03T', 
-                         title='Math vs Reading Scores by Year of Birth', 
-                         labels={'PV1MATH': 'Math Scores', 'PV1READ': 'Reading Scores'},
-                         color_continuous_scale='Viridis')  # Colorblind-friendly color scale
-st.plotly_chart(fig_scatter)
+# Apply Filters
+filtered_df = df if selected_gender == "All" else df[df["Gender"] == selected_gender]
 
-# 2. Bar Plot of Math, Reading, and Science Scores by Student
-st.subheader('Scores by Subject for Each Year of Birth')
-df_long = pd.melt(df, id_vars=['ST003D03T'], value_vars=['PV1MATH', 'PV1READ', 'PV1SCIE'], 
-                  var_name='Subject', value_name='Score')
+# Interactive Box Plot
+st.subheader("Box Plot of Scores by Gender")
+if selected_subjects:
+    melted_df = filtered_df.melt(
+        id_vars=["Gender"],
+        value_vars=selected_subjects,
+        var_name="Subject",
+        value_name="Score",
+    )
+    box_fig = px.box(
+        melted_df,
+        x="Subject",
+        y="Score",
+        color="Gender",
+        color_discrete_sequence=px.colors.qualitative.Safe,
+        title="Box Plot of Selected Subjects by Gender",
+    )
+    st.plotly_chart(box_fig)
+else:
+    st.warning("Please select at least one subject to display the box plot.")
 
-fig_bar = px.bar(df_long, x='ST003D03T', y='Score', color='Subject', 
-                 title='Scores by Subject for Each Year of Birth', 
-                 labels={'ST003D03T': 'Year of Birth', 'Score': 'Score'},
-                 color_discrete_sequence=px.colors.qualitative.Set2)  # Colorblind-friendly palette
-st.plotly_chart(fig_bar)
+# Scatter Plot
+st.subheader("Scatter Plot of Mathematics vs Reading")
+scatter_fig = px.scatter(
+    filtered_df,
+    x="PV1MATH",
+    y="PV1READ",
+    color="Gender",
+    size="PV1SCIE",
+    hover_data=["CNTSTUID"],
+    labels={"PV1MATH": "Mathematics Score", "PV1READ": "Reading Score"},
+    title="Scatter Plot of Math vs Reading (Size = Science Score)",
+    color_discrete_sequence=px.colors.qualitative.Safe,
+)
+st.plotly_chart(scatter_fig)
 
-# 3. Correlation Heatmap
-st.subheader('Correlation Heatmap of Scores')
-corr = df[['PV1MATH', 'PV1READ', 'PV1SCIE']].corr()
+# Average Scores Bar Chart
+st.subheader("Average Scores by Subject")
+if selected_subjects:
+    avg_scores = filtered_df[selected_subjects].mean()
+    bar_fig = px.bar(
+        x=avg_scores.index,
+        y=avg_scores.values,
+        labels={"x": "Subject", "y": "Average Score"},
+        color=avg_scores.index,
+        title="Average Scores for Selected Subjects",
+        color_discrete_sequence=px.colors.qualitative.Set2,
+    )
+    st.plotly_chart(bar_fig)
 
-fig_heatmap = go.Figure(data=go.Heatmap(
-    z=corr.values,
-    x=corr.columns,
-    y=corr.columns,
-    colorscale='Cividis'  # Colorblind-friendly color scale
-))
-fig_heatmap.update_layout(title='Correlation Heatmap of Scores',
-                          xaxis_title='Subjects',
-                          yaxis_title='Subjects')
-st.plotly_chart(fig_heatmap)
+# Data Table
+st.subheader("Raw Data Table")
+st.dataframe(filtered_df)
 
-# 4. Interactive Filtering by Gender
-st.subheader('Interactive Gender Filter: Math vs Reading Scores')
-fig_gender_filter = px.scatter(df, x='PV1MATH', y='PV1READ', color='ST004D01T', 
-                               title='Interactive Gender Filter: Math vs Reading Scores',
-                               labels={'ST004D01T': 'Gender (1=Female, 2=Male)', 
-                                       'PV1MATH': 'Math Scores', 'PV1READ': 'Reading Scores'},
-                               color_discrete_sequence=px.colors.qualitative.Set2)  # Colorblind-friendly palette
-st.plotly_chart(fig_gender_filter)
-
-# 5. Interactive Filtering by Year of Birth (ST003D03T) and Air Purifier Ownership
-st.subheader('Interactive Year Filter: Math vs Science Scores')
-fig_year_filter = px.scatter(df, x='PV1MATH', y='PV1SCIE', color='ST003D03T', 
-                             title='Interactive Year Filter: Math vs Science Scores',
-                             labels={'PV1MATH': 'Math Scores', 'PV1SCIE': 'Science Scores'},
-                             color_continuous_scale='Viridis')  # Colorblind-friendly color scale
-st.plotly_chart(fig_year_filter)
-
-# 6. Ownership of Smart TV vs Air Purifier for Each Student
-st.subheader('Smart TV vs Air Purifier Ownership by Year of Birth')
-fig_tv_air_filter = px.scatter(df, x='ST250D06JA', y='ST250D07JA', color='ST003D03T', 
-                               title='Smart TV vs Air Purifier Ownership by Year of Birth',
-                               labels={'ST250D06JA': 'Smart TV (1=Yes, 2=No)', 
-                                       'ST250D07JA': 'Air Purifier (1=Yes, 2=No)'},
-                               color_continuous_scale='Viridis')  # Colorblind-friendly color scale
-st.plotly_chart(fig_tv_air_filter)
+# Download Button
+st.download_button(
+    label="Download Filtered Data as CSV",
+    data=filtered_df.to_csv(index=False),
+    file_name="filtered_data.csv",
+    mime="text/csv",
+)
