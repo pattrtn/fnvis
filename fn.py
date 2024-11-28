@@ -4,8 +4,18 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Load data for mapping
-geo_data_path = './pisa-pisa.csv'
-df = pd.read_csv(geo_data_path, encoding='utf-8')
+geo_data_path = './pisa-pisa.csv'  # Adjust the path if necessary
+try:
+    df = pd.read_csv(geo_data_path, encoding='utf-8')
+except FileNotFoundError:
+    st.error(f"The file '{geo_data_path}' was not found. Please check the file path.")
+    st.stop()  # Stop further execution
+
+# Display columns in the data to ensure proper loading
+st.write("Columns in the dataset:", df.columns)
+
+# Check for missing values
+st.write("Missing values in the dataset:", df.isnull().sum())
 
 # Streamlit app layout
 st.title('Educational Data Analysis Dashboard')
